@@ -19,7 +19,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add service defaults & Aspire components.
 builder.AddAspireServiceDefaults();
 
-builder.Services.AddFastEndpoints();
+// Restrict endpoint discovery to this assembly. Auto-discovery scans every loaded
+// assembly and fails on BlazorInputFile (WASM-only type layout) pulled in via BlazorShared.
+builder.Services.AddFastEndpoints(o =>
+{
+    o.Assemblies = [typeof(Program).Assembly];
+    o.DisableAutoDiscovery = true;
+});
 
 // Use to force loading of appsettings.json of test project
 builder.Configuration.AddConfigurationFile("appsettings.test.json");
