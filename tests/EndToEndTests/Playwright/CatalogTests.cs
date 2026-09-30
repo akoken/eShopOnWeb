@@ -5,7 +5,8 @@ using Xunit;
 
 namespace Microsoft.eShopWeb.EndToEndTests.Playwright;
 
-public sealed class CatalogTests(BrowserFixture browserFixture) : IClassFixture<BrowserFixture>
+[Collection(BrowserCollection.Name)]
+public sealed class CatalogTests(BrowserFixture browserFixture)
 {
     [Fact]
     public async Task HomePage_ShowsCatalog()

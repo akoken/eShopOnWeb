@@ -3,7 +3,8 @@ using Xunit;
 
 namespace Microsoft.eShopWeb.EndToEndTests.Playwright;
 
-public sealed class SmokeTests(BrowserFixture browserFixture) : IClassFixture<BrowserFixture>
+[Collection(BrowserCollection.Name)]
+public sealed class SmokeTests(BrowserFixture browserFixture)
 {
     [Fact]
     public async Task HomePage_ShowsExpectedProductData()

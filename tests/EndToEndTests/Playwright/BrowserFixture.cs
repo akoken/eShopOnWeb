@@ -126,26 +126,36 @@ public sealed class BrowserFixture : IAsyncLifetime
     private async Task WaitForServerAsync(string baseUrl, TimeSpan timeout)
     {
         DateTimeOffset deadline = DateTimeOffset.UtcNow.Add(timeout);
+        string lastObservation = "no response yet";
 
         while (DateTimeOffset.UtcNow < deadline)
         {
+            // A process that already exited will never start listening, so report its
+            // stderr immediately instead of polling until the timeout hides the cause
+            // (for example a port already taken by another web app instance).
+            if (_webProcess is { HasExited: true })
+            {
+                string errorOutput = await _webProcess.StandardError.ReadToEndAsync();
+                throw new InvalidOperationException(
+                    $"Web app exited during startup with code {_webProcess.ExitCode}. {errorOutput}".Trim());
+            }
+
             try
             {
-                if (_webProcess is { HasExited: true })
-                {
-                    string errorOutput = await _webProcess.StandardError.ReadToEndAsync();
-                    throw new InvalidOperationException($"Web app exited during startup. {errorOutput}".Trim());
-                }
-
                 using HttpResponseMessage response = await _httpClient.GetAsync(baseUrl);
-                if ((int)response.StatusCode > 0)
+                if (response.IsSuccessStatusCode)
                 {
                     return;
                 }
+
+                // The app answers but fails its requests (for example an unreachable
+                // database), so keep waiting and surface the status on timeout.
+                lastObservation = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
             }
-            catch
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                // App is still starting.
+                // Not listening yet.
+                lastObservation = ex.GetType().Name;
             }
 
             await Task.Delay(250);
@@ -157,7 +167,8 @@ public sealed class BrowserFixture : IAsyncLifetime
             await _webProcess.WaitForExitAsync();
         }
 
-        throw new TimeoutException($"Web app did not start within {timeout.TotalSeconds} seconds.");
+        throw new TimeoutException(
+            $"Web app did not become healthy at {baseUrl} within {timeout.TotalSeconds} seconds (last observation: {lastObservation}).");
     }
 
     private static string SanitizePathSegment(string value)

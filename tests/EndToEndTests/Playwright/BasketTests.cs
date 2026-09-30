@@ -4,7 +4,8 @@ using Xunit;
 
 namespace Microsoft.eShopWeb.EndToEndTests.Playwright;
 
-public sealed class BasketTests(BrowserFixture browserFixture) : IClassFixture<BrowserFixture>
+[Collection(BrowserCollection.Name)]
+public sealed class BasketTests(BrowserFixture browserFixture)
 {
     [Fact(Skip = "Intentional failure demo. Remove Skip to observe screenshot/video/trace artifacts.")]
     public async Task Cart_AddItem_ShowsExpectedTotal()
